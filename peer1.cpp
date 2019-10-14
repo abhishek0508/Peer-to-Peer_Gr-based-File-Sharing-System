@@ -112,9 +112,10 @@ vector<string> getSHA(string fpath){
         file_size = file_size-n;
         SHA1(buffer, n, hash1);
         bzero(buffer, BUFFER_SIZE); 
-        for(int i=0;i<20;i++){
+        for(int i=0;i<5;i++){
             sprintf(partial+2*i,"%02x",hash1[i]);
         }
+
         total_chunk_string += partial;
     }
     result.push_back(total_chunk_string);
@@ -284,6 +285,7 @@ int main(int argc, char *argv[])
         }
         write(sockfd, request, strlen(request));
         memset(request, '\0', sizeof(request));
+        memset(response, '\0', sizeof(response));
         read(sockfd, response, sizeof(response));
         printf("%s\n", response);
 
