@@ -6,12 +6,13 @@ using namespace std;
 #define BUFFER_SIZE 512*1024
 map<string, string> user_info;// contains user_name & password
 map<string, vector<string> > group_user; // contains all group info & all users in it
-map<string, string> group_owner; // user associated with which group
+map<string, string> group_owner; // group_id & owner
 map<string, vector<string>> gr_file; // groupid-key containg files(file_name)
 map<string, vector<string> > file_port; //file_name is key ip & port ehich contains these files.
 map<string, vector<string> > user_group; 
 map<string, string> file_full_sha;
 map<string, string> file_partial_sha;
+map<string, vector<string> > join_group; //request to join group is here(group_id, curr_user)
 pthread_mutex_t mutex1  = PTHREAD_MUTEX_INITIALIZER; 
 
 
@@ -27,7 +28,6 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
     string input(request_type);
 
     cout<<"type: "<<request_type<<endl;
-    cout<<"request_length--"<<sizeof(request_type)<<endl;
     vector<string> command;
     boost::split(command, input, boost::is_any_of(" "));
 
@@ -71,10 +71,12 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
             else if(strcmp(command[0].c_str(), "join_group")==0){
 
                 pthread_mutex_lock(&mutex1);
-                group_user[command[1]].push_back(curr_user);
-                user_group[curr_user].push_back(command[1]);
+                // group_user[command[1]].push_back(curr_user);
+                // user_group[curr_user].push_back(command[1]);
+                join_group[command[1]].push_back(curr_user);
+                cout<<"group_id="<<command[1]<<endl;
                 pthread_mutex_unlock(&mutex1);
-                return "Congrats! you have joined a group";
+                return "your request is pending with owner";
             
             }
             else if(strcmp(command[0].c_str(), "leave_group")==0){
@@ -111,15 +113,28 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
             else if(strcmp(command[0].c_str(), "upload_file")==0){
                 
                 string fname;
-                fname = getFileName(command[1]);
+                bool flag=false;
+                vector<string> users = group_user[command[2]];
+                if(users.size()>0){
+                    for(string s: users){
+                        if(s==curr_user)
+                            flag=true;
+                    }
+                }
 
-                pthread_mutex_lock(&mutex1);
+                if(flag==true){
+                    fname = getFileName(command[1]);
+                    pthread_mutex_lock(&mutex1);
                     gr_file[command[2]].push_back(fname);
                     file_port[fname].push_back(command[5]);
                     file_full_sha[fname] = command[4];
                     file_partial_sha[fname] = command[3];
-                pthread_mutex_unlock(&mutex1);
-                return "file_uploaded";
+                    pthread_mutex_unlock(&mutex1);
+                    return "file_uploaded";
+                }
+                else{
+                    return "you're not part of group or group doesnt exist";
+                }
             
             }
             else if(strcmp(command[0].c_str(), "list_files")==0){
@@ -134,21 +149,61 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
                 return files;
             }
             else if(strcmp(command[0].c_str(), "download_file")==0){
-                string final_ports_sha="";
-                vector<string> ports = file_port[command[2]];
-                pthread_mutex_lock(&mutex1);
-                for(string s: ports){
-                    final_ports_sha.append(s);
-                    final_ports_sha.append(" ");
+                
+                bool flag= false;
+                vector<string> users = group_user[command[1]];
+                for(string s: users){
+                    if(s==curr_user)
+                        flag=true;
                 }
-                final_ports_sha.append(file_full_sha[command[2]]);
-                final_ports_sha.append(" ");
-                final_ports_sha.append(file_partial_sha[command[2]]);
-                pthread_mutex_unlock(&mutex1);
-                return final_ports_sha;
+
+                if(flag==true){
+                    string final_ports_sha="";
+                    vector<string> ports = file_port[command[2]];
+                    pthread_mutex_lock(&mutex1);
+                    for(string s: ports){
+                        final_ports_sha.append(s);
+                        final_ports_sha.append(" ");
+                    }
+                    final_ports_sha.append(file_full_sha[command[2]]);
+                    final_ports_sha.append(" ");
+                    final_ports_sha.append(file_partial_sha[command[2]]);
+                    pthread_mutex_unlock(&mutex1);
+                    return final_ports_sha;
+                }
+                else{
+                    return "you cannot download, first join the group";
+                }
+            }
+            else if(strcmp(command[0].c_str(), "list_requests")==0){
+                
+                string list_requests="";
+                cout<<"list_request="<<command[1]<<endl;
+                vector<string> list_req = join_group[command[1]];
+                for(string s: list_req){
+                    cout<<"s=="<<s<<endl;
+                    pthread_mutex_lock(&mutex1);
+                    list_requests.append(s);
+                    list_requests.append(" ");
+                    pthread_mutex_unlock(&mutex1);
+                }
+                return list_requests;
+
+            }
+            else if(strcmp(command[0].c_str(), "accept_request")==0){
+
+                string user = group_owner[command[1]];
+                if(user == curr_user){
+                    pthread_mutex_lock(&mutex1);
+                    group_user[command[1]].push_back(command[2]);
+                    user_group[command[2]].push_back(command[1]);
+                    pthread_mutex_unlock(&mutex1);
+                } 
+                return "request accpted";
+
             }
             else if(strcmp(command[0].c_str(), "show_downloads")==0){
-
+                
             }
             else if(strcmp(command[0].c_str(), "stop_sharing")==0){
 

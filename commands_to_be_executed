@@ -3,8 +3,10 @@ g++ -o peer1 peer1.cpp -lpthread -lcrypto
 ./peer1 127.0.0.1 8765 tracker_info.txt
 create_user abhishek asd
 login abhishek asd
+download_file aaa KabirSingh.mkv /home/abhishek/dev/OperatingSystem/Assignment_2/share_file1
+list_groups
+join_group abc
 download_file abc KabirSingh.mkv /home/abhishek/dev/OperatingSystem/Assignment_2/share_file1
-
 
 //Tracker
 g++ -o tracker tracker.cpp -lpthread -lcrypto
@@ -17,5 +19,12 @@ g++ -o peer2 peer1.cpp -lpthread -lcrypto
 create_user utsav asas
 login utsav asas
 create_group abc
+upload_file /home/abhishek/dev/OperatingSystem/Assignment_2/KabirSingh.mkv aaa
+(run this for group failure checking)
 upload_file /home/abhishek/dev/OperatingSystem/Assignment_2/KabirSingh.mkv abc
+list_requests abc
+accept_request abc abhishek
+list_files abc
+
+
 

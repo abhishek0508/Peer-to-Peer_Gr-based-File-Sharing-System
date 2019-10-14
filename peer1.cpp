@@ -39,8 +39,7 @@ void *RequestThread(void *newsockfd1){
 
     // sending file to client by reading in chunks
     int count=0;
-    int B_SIZE = 8*1024;
-    while( (n = fread(buff, sizeof(char), B_SIZE, fp))> 0){
+    while( (n = fread(buff, sizeof(char), BUFFER_SIZE, fp))> 0){
         printf("%d\n",n);
         send(newsockfd, buff, n, 0);
         bzero(buff, sizeof(buff));
@@ -151,10 +150,9 @@ void receiveFile(int port_no, string dest, vector<string> shas, string fname){
         perror("Not able to create file");   
     }
 
-    int B_SIZE = 8*1024;
     int count = 0;
     // recieving file by reading in chunks
-    while((n = recv(sockfd, buff, B_SIZE, 0))>0){
+    while((n = recv(sockfd, buff, BUFFER_SIZE, 0))>0){
         cout<<"n=="<<n<<endl;
         fwrite(buff, sizeof(char), n, fp);
         bzero(buff, sizeof(buff));
@@ -265,6 +263,8 @@ int main(int argc, char *argv[])
         printf("%s\n", response);
 
         if(str[0]=="download_file"){
+
+            if(strcmp(response,"you cannot download, first join the group")!=0){
             vector<int> ports = getPorts(response);
 
             vector<string> shas = getSHAFrom(response);
@@ -274,14 +274,14 @@ int main(int argc, char *argv[])
             while(no_of_ports>0){
                 // here implement multiple thread for downloading files
                 // cout<<"FileName--"<<str[2]<<endl;
-
-                
+        
                 string dest = str[3];
                 dest.append("/");
                 dest.append(str[2]);
                 receiveFile(ports[i], dest, shas, str[2]);
                 i++;
                 no_of_ports--;
+            }
             }
         }
 
