@@ -13,5 +13,6 @@
 #include<vector>
 #include<boost/algorithm/string.hpp>
 #include<map>
+#include <openssl/sha.h>
 
 

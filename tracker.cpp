@@ -66,7 +66,6 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
         user_info[command[1]] = command[2];
         pthread_mutex_unlock(&mutex1);
 
-        cout<<command[1]<<" "<<command[2]<<endl;
         return "user_created";
     }
     //login user
@@ -136,10 +135,13 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
                 return str;
             }
             else if(strcmp(command[0].c_str(), "upload_file")==0){
-
+                
                 string fname;
                 fname = getFileName(command[1]);
                 return fname;
+            }
+            else{
+                return "false";
             }
         }
         else{
@@ -156,13 +158,11 @@ void *RequestThread(void *newsockfd1){
     // request_type from client
     char request_type[BUFFER_SIZE];
     int newsockfd = *((int*)newsockfd1);
-    
-    bzero(request_type, BUFFER_SIZE);
 
     while(true){
-        bzero(request_type, BUFFER_SIZE);
+        memset(request_type, '\0', sizeof(request_type));
         read(newsockfd, request_type, sizeof(request_type));
-
+        cout<<"read only once"<<endl;
         // function to handle type of request from peers in tracker
         string response = request_handler(request_type, login_flag, curr_user);
 

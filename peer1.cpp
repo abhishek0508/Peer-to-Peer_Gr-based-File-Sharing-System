@@ -78,13 +78,10 @@ void *RequestThread(void *newsockfd1){
     fclose(fp);
     close(newsockfd);
 }
-bool isUpload(string request){
+vector<string> isUpload(string request){
     vector<string> result;
     boost::split(result, request, boost::is_any_of(" "));
-    if(result[0]=="upload_file")
-        return true;
-    else
-        return false;  
+    return result;  
 }
 string getFilePath(string request){
     vector<string> result;
@@ -94,8 +91,43 @@ string getFilePath(string request){
     else
         return NULL;  
 }
-string getSHA(string fpath){
+vector<string> getSHA(string fpath){
 
+    vector<string> result;
+    FILE *fp = fopen(fpath.c_str(),"r+");
+    if(fp==NULL){
+        exit(1);
+    }
+
+    fseek(fp,0, SEEK_END);
+    int file_size = ftell(fp);
+    rewind(fp);
+
+    unsigned char buffer[BUFFER_SIZE];
+    unsigned char hash1[20];
+    char partial[40];
+    string total_chunk_string="";
+    int n;
+    while((n=fread(buffer,1,sizeof(buffer),fp))>0 && file_size>0){
+        file_size = file_size-n;
+        SHA1(buffer, n, hash1);
+        bzero(buffer, BUFFER_SIZE); 
+        for(int i=0;i<20;i++){
+            sprintf(partial+2*i,"%02x",hash1[i]);
+        }
+        total_chunk_string += partial;
+    }
+    result.push_back(total_chunk_string);
+
+    //whole file sha1
+    unsigned char final_hash[20];
+    char shortHash[40];
+    SHA1((unsigned char *)total_chunk_string.c_str(), total_chunk_string.size(), final_hash);
+    for(int i=0;i<20;i++){
+        sprintf(shortHash+i*2,"%02x",final_hash[i]);
+    }
+    result.push_back(string(shortHash));
+    return result;
 }
 
 void *ThreadServerProgram(void *arg){
@@ -226,17 +258,32 @@ int main(int argc, char *argv[])
         char response[BUFFER_SIZE];
         printf("Enter commands\n");
         getline(cin,fname);
-        for(int i=0;i<fname.length();i++){
+        int len = fname.length();
+        for(int i=0;i<len;i++){
             request[i] = fname.at(i);
         }
-        if(isUpload(request)){
+
+        vector<string> str = isUpload(request);
+        if(str[0]=="upload_file"){
+
             string filePath = getFilePath(request);
-            string SHA1 = getSHA(filePath);
-            
+            vector<string> SHA_one = getSHA(filePath);
+            string final_request(request);
+            final_request.append(" ");
+            final_request.append(SHA_one[0]);
+            final_request.append(" ");
+            final_request.append(SHA_one[1]);
+            final_request.append(" ");
+            final_request.append(argv[2]);
+            final_request.append(" ");
+            final_request.append(argv[1]);
+            bzero(request, BUFFER_SIZE);
+            for(int i=0;i<final_request.length();i++){
+                request[i] = final_request.at(i);
+            }
         }
-        send(sockfd, request, sizeof(request), 0);
-        bzero(request, BUFFER_SIZE);
-        bzero(response, BUFFER_SIZE);
+        write(sockfd, request, strlen(request));
+        memset(request, '\0', sizeof(request));
         read(sockfd, response, sizeof(response));
         printf("%s\n", response);
 
