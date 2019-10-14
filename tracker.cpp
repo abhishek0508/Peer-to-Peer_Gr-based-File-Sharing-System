@@ -1,4 +1,5 @@
 #include"utils.h"
+#include"tracker_file.h"
 
 using namespace std;
 
@@ -13,40 +14,7 @@ map<string, string> file_full_sha;
 map<string, string> file_partial_sha;
 pthread_mutex_t mutex1  = PTHREAD_MUTEX_INITIALIZER; 
 
-vector<string> getTrackerPort(string tracker_info){
 
-    FILE *fp = fopen(tracker_info.c_str(), "r+");
-    if(fp == NULL){
-        exit(1);
-    }
-
-    vector<string> portno;
-    char c[1000];
-    fscanf(fp, "%[^\n]", c);
-    string tracker(c);
-    boost::split(portno, tracker, boost::is_any_of(" "));
-    fclose(fp);
-    return portno;
-}
-vector<string> getTrackerIP(string tracker_info){
-    FILE *fp = fopen(tracker_info.c_str(), "r+");
-    if(fp == NULL){
-        exit(1);
-    }
-
-    vector<string> IP;
-    char c[1000];
-    char c1[1000];
-
-    fscanf(fp, "%[^\n]", c);
-    fscanf(fp, "%c", c);
-    fscanf(fp, "%[^\n]", c1);
-
-    string tracker(c1);
-    boost::split(IP, tracker, boost::is_any_of(" "));
-    fclose(fp);
-    return IP;
-}
 string getFileName(string fname){
     vector<string> fcomponent;
     boost::split(fcomponent, fname, boost::is_any_of("/"));
@@ -176,7 +144,6 @@ string request_handler(char *request_type, int &login_flag, string &curr_user){
                 final_ports_sha.append(file_full_sha[command[2]]);
                 final_ports_sha.append(" ");
                 final_ports_sha.append(file_partial_sha[command[2]]);
-                final_ports_sha.append(" ");
                 pthread_mutex_unlock(&mutex1);
                 return final_ports_sha;
             }
