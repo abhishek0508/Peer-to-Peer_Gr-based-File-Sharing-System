@@ -1,43 +1,11 @@
 #include"utils.h"
-
+#include"Ports.h"
+#include"GetSha.h"
+#include"tracker_file.h"
+#include"extra_fun.h"
 using namespace std;
-
 #define BUFFER_SIZE 512*1024
 
-vector<string> getTrackerPort(string tracker_info){
-
-    FILE *fp = fopen(tracker_info.c_str(), "r+");
-    if(fp == NULL){
-        exit(1);
-    }
-
-    vector<string> portno;
-    char c[1000];
-    fscanf(fp, "%[^\n]", c);
-    string tracker(c);
-    boost::split(portno, tracker, boost::is_any_of(" "));
-    fclose(fp);
-    return portno;
-}
-vector<string> getTrackerIP(string tracker_info){
-    FILE *fp = fopen(tracker_info.c_str(), "r+");
-    if(fp == NULL){
-        exit(1);
-    }
-
-    vector<string> IP;
-    char c[1000];
-    char c1[1000];
-
-    fscanf(fp, "%[^\n]", c);
-    fscanf(fp, "%c", c);
-    fscanf(fp, "%[^\n]", c1);
-
-    string tracker(c1);
-    boost::split(IP, tracker, boost::is_any_of(" "));
-    fclose(fp);
-    return IP;
-}
 
 void *RequestThread(void *newsockfd1){
     
@@ -47,7 +15,7 @@ void *RequestThread(void *newsockfd1){
     int newsockfd = *((int*)newsockfd1);
     
     int val = read(newsockfd, c, sizeof(c));
-    
+    cout<<"c=="<<c<<endl;
     // by opening the file name received from client we are checking if file is present
     // in server or not
 
@@ -67,68 +35,20 @@ void *RequestThread(void *newsockfd1){
     rewind(fp);
 
     // sending file size to client
-    send(newsockfd, &size, sizeof(size), 0);
+    // send(newsockfd, &size, sizeof(size), 0);
 
     // sending file to client by reading in chunks
-    while( (n = fread(buff, sizeof(char), BUFFER_SIZE, fp))> 0){
+    int count=0;
+    int B_SIZE = 8*1024;
+    while( (n = fread(buff, sizeof(char), B_SIZE, fp))> 0){
         printf("%d\n",n);
         send(newsockfd, buff, n, 0);
-        memset(buff, '\0', BUFFER_SIZE);
+        bzero(buff, sizeof(buff));
+        count++;
     }
+    cout<<count<<endl;
     fclose(fp);
     close(newsockfd);
-}
-vector<string> isUpload(string request){
-    vector<string> result;
-    boost::split(result, request, boost::is_any_of(" "));
-    return result;  
-}
-string getFilePath(string request){
-    vector<string> result;
-    boost::split(result, request, boost::is_any_of(" "));
-    if(result[0]=="upload_file")
-        return result[1];
-    else
-        return NULL;  
-}
-vector<string> getSHA(string fpath){
-
-    vector<string> result;
-    FILE *fp = fopen(fpath.c_str(),"r+");
-    if(fp==NULL){
-        exit(1);
-    }
-
-    fseek(fp,0, SEEK_END);
-    int file_size = ftell(fp);
-    rewind(fp);
-
-    unsigned char buffer[BUFFER_SIZE];
-    unsigned char hash1[20];
-    char partial[40];
-    string total_chunk_string="";
-    int n;
-    while((n=fread(buffer,1,sizeof(buffer),fp))>0 && file_size>0){
-        file_size = file_size-n;
-        SHA1(buffer, n, hash1);
-        bzero(buffer, BUFFER_SIZE); 
-        for(int i=0;i<5;i++){
-            sprintf(partial+2*i,"%02x",hash1[i]);
-        }
-
-        total_chunk_string += partial;
-    }
-    result.push_back(total_chunk_string);
-
-    //whole file sha1
-    unsigned char final_hash[20];
-    char shortHash[40];
-    SHA1((unsigned char *)total_chunk_string.c_str(), total_chunk_string.size(), final_hash);
-    for(int i=0;i<20;i++){
-        sprintf(shortHash+i*2,"%02x",final_hash[i]);
-    }
-    result.push_back(string(shortHash));
-    return result;
 }
 
 void *ThreadServerProgram(void *arg){
@@ -188,6 +108,61 @@ void *ThreadServerProgram(void *arg){
 
     }
     pthread_exit(NULL);
+}
+
+
+void receiveFile(int port_no, string dest, vector<string> shas, string fname){
+    
+    int n,fsize;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    char buff[BUFFER_SIZE];
+
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if(sockfd<0){
+        perror("error opening socket\n");
+    }
+
+    server = gethostbyname("127.0.0.1");
+    if(server == NULL){
+        fprintf(stderr, "Error, no such host\n");
+    }
+
+    bzero((char*)&serv_addr, sizeof(serv_addr));
+
+    // assign serverip & port into the structure
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serv_addr.sin_port = htons(port_no);
+
+    if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))<0){
+        perror("connection failed to server\n");
+    }
+
+    // sending file_name to another peer to fetch filename
+    send(sockfd, fname.c_str(), strlen(fname.c_str()), 0);
+    // recv(sockfd, &fsize, sizeof(fsize),0);
+
+    cout<<"file_size="<<fsize<<endl;
+
+    FILE *fp = fopen(dest.c_str(), "w+");
+    if(fp==NULL){
+        perror("Not able to create file");   
+    }
+
+    int B_SIZE = 8*1024;
+    int count = 0;
+    // recieving file by reading in chunks
+    while((n = recv(sockfd, buff, B_SIZE, 0))>0){
+        cout<<"n=="<<n<<endl;
+        fwrite(buff, sizeof(char), n, fp);
+        bzero(buff, sizeof(buff));
+        count++;
+    }
+    cout<<count<<endl;
+    fclose(fp);
+
 }
 
 int main(int argc, char *argv[]) 
@@ -264,7 +239,7 @@ int main(int argc, char *argv[])
             request[i] = fname.at(i);
         }
 
-        vector<string> str = isUpload(request);
+        vector<string> str = request_type_command(request);
         if(str[0]=="upload_file"){
 
             string filePath = getFilePath(request);
@@ -288,6 +263,27 @@ int main(int argc, char *argv[])
         memset(response, '\0', sizeof(response));
         read(sockfd, response, sizeof(response));
         printf("%s\n", response);
+
+        if(str[0]=="download_file"){
+            vector<int> ports = getPorts(response);
+
+            vector<string> shas = getSHAFrom(response);
+            pthread_t thread1;
+            int no_of_ports = ports.size();
+            int i=0;
+            while(no_of_ports>0){
+                // here implement multiple thread for downloading files
+                // cout<<"FileName--"<<str[2]<<endl;
+
+                
+                string dest = str[3];
+                dest.append("/");
+                dest.append(str[2]);
+                receiveFile(ports[i], dest, shas, str[2]);
+                i++;
+                no_of_ports--;
+            }
+        }
 
         // this is for connecting to peer
         // char request[BUFFER_SIZE];
