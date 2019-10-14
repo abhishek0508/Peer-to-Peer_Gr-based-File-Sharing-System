@@ -284,29 +284,6 @@ int main(int argc, char *argv[])
             }
             }
         }
-
-        // this is for connecting to peer
-        // char request[BUFFER_SIZE];
-        // printf("enter file name");
-        // getline(cin, fname);
-        // send(sockfd, fname.c_str(), sizeof(fname), 0);
-
-        
-        // fp = fopen("new_file.mkv", "w+");
-        // if(fp == NULL){
-        //     perror("Not able to create file on client side");
-        // }
-
-        // long long file_size;
-        // recv(sockfd, &file_size, sizeof(file_size), 0);
-        // cout<<"file_size:"<<file_size<<endl;
-        // fflush(fp);
-        // while((n = recv(sockfd, buff, BUFFER_SIZE, 0))>0){
-        //     fwrite(buff, sizeof(char), n, fp);
-        //     fflush(fp);
-        //     memset(buff, '\0', BUFFER_SIZE);
-        // }
-        // fclose(fp);
     }
 
     close(sockfd); 
