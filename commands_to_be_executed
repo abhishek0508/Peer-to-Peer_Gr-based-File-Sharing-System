@@ -27,4 +27,10 @@ accept_request abc abhishek
 list_files abc
 
 
+Important Notes-
+Random first for first peice, Tit-for-tit, rare-first. Distributed Hash table for decentralized tracker.
+LoopHoles-Didn't implemented validations for differnet commands for user login&password.
+System Loopholes - Cannt open more than 1024 filedescriptor.
+It was centralized tracker, Decentralized tracker wasnt implemented, DHT is needed.
+
 
