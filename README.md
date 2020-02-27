@@ -3,11 +3,11 @@
 # Architecture overview:
 # 1. Synchronized trackers(​ 2 tracker system)​ :
   a. Maintain information of clients with their files(shared by client) to assist the clients
-for the communication between peers
+for the communication between peers <br\>
   b. Trackers should be synchronized i.e all the trackers if online should be in sync
 with each other
 # 2. Clients:
-  a. User should create an account and register with tracker
+  a. User should create an account and register with tracker <br/>
   b. Login using the user credentials
   c. Create Group and hence will become owner of that group
   d. Fetch list of all Groups in server
