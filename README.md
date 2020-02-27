@@ -5,7 +5,12 @@ Refer the following Paper for understanding Peer2Peer
 
 http://web.cs.ucla.edu/classes/cs217/05BitTorrent.pdf
 
-Refer the "commads_to_be_executed" file in repo for creating user,groups,sending & recieving files.
+# Architecture overview:
+# 1. Synchronized trackers(​ 2 tracker system)​ :
+  a. Maintain information of clients with their files(shared by client) to assist the clients
+for the communication between peers
+  b. Trackers should be synchronized i.e all the trackers if online should be in sync
+with each other
 
 
 
